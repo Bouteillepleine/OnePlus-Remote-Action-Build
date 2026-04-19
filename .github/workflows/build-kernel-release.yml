@@ -186,14 +186,24 @@ jobs:
             exit 1
           fi
 
-          mapfile -t all_json_files < <(find configs/ -type f -name "*.json" | sort)
+          model_part="${input%_*}"
+          os_part="${input##*_}"
+          os_version=$(echo "$os_part" | tr '[:lower:]' '[:upper:]')
+          config_dir="configs/${os_part}"
 
-          if [ "${#all_json_files[@]}" -eq 0 ]; then
-            echo "::error::No JSON config files found in configs/"
+          if [ ! -d "$config_dir" ]; then
+            echo "::error::Config directory not found: $config_dir"
             exit 1
           fi
 
-          echo "Validating JSON config files..."
+          mapfile -t all_json_files < <(find "$config_dir" -type f -name "*.json" | sort)
+
+          if [ "${#all_json_files[@]}" -eq 0 ]; then
+            echo "::error::No JSON config files found in $config_dir"
+            exit 1
+          fi
+
+          echo "Validating JSON config files in $config_dir..."
           for file in "${all_json_files[@]}"; do
             if ! jq empty "$file" >/dev/null 2>&1; then
               echo "::error file=$file::Invalid JSON in $file"
@@ -203,7 +213,7 @@ jobs:
             fi
           done
 
-          echo "All config JSON files are valid"
+          echo "All config JSON files in $config_dir are valid"
 
           jq -s '
             map(
@@ -219,10 +229,6 @@ jobs:
             exit 1
           fi
 
-          model_part="${input%_*}"
-          os_part="${input##*_}"
-          os_version=$(echo "$os_part" | tr '[:lower:]' '[:upper:]')
-
           jq_filter="map(select(.model == \"$model_part\" and .os_version == \"$os_version\"))"
           filtered=$(jq -c "$jq_filter" matrix.json)
           count=$(jq 'length' <<<"$filtered")
@@ -230,7 +236,7 @@ jobs:
           if [ "$count" -eq 0 ]; then
             echo "::error::No config files found for model '$model_part' with OS version '$os_version'!"
             echo ""
-            echo "Available configurations:"
+            echo "Available configurations in $config_dir:"
             jq -r '.[] | "  - \(.model)_\(.os_version | ascii_downcase) (\(.os_version), \(.android_version)-\(.kernel_version))"' matrix.json
             exit 1
           fi
