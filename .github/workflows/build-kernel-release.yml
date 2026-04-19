@@ -434,14 +434,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Bouteillepleine/OnePlus_Kernels
-          ref: rsksu
+          ref: RSKSU
           sparse-checkout: |
             manifests/
           sparse-checkout-cone-mode: false
 
       - name: 🔨 Build Kernel
         id: build
-        uses: Bouteillepleine/OnePlus_Kernels/.github/actions@rsksu
+        uses: Bouteillepleine/OnePlus_Kernels/.github/actions@RSKSU
         with:
           op_config_json: ${{ steps.prepare_config.outputs.config_json }}
           ksu_type: ${{ matrix.ksu_type }}
