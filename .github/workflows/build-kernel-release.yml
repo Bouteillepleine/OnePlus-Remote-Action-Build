@@ -186,18 +186,26 @@ jobs:
             exit 1
           fi
 
-          echo "[" > matrix.json
           mapfile -t all_json_files < <(find configs/ -type f -name "*.json" | sort)
-          for i in "${!all_json_files[@]}"; do
-            file="${all_json_files[$i]}"
-            if [ -f "$file" ]; then
-              jq -r '.' "$file" >> matrix.json
-              if [ $((i+1)) -lt ${#all_json_files[@]} ]; then
-                echo "," >> matrix.json
-              fi
-            fi
-          done
-          echo "]" >> matrix.json
+
+          if [ "${#all_json_files[@]}" -eq 0 ]; then
+            echo "::error::No JSON config files found in configs/"
+            exit 1
+          fi
+
+          jq -s '
+            map(
+              if type == "array" then .[]
+              else .
+              end
+            )
+          ' "${all_json_files[@]}" > matrix.json
+
+          if ! jq empty matrix.json; then
+            echo "::error::Generated matrix.json is invalid"
+            sed -n '1,200p' matrix.json
+            exit 1
+          fi
 
           model_part="${input%_*}"
           os_part="${input##*_}"
