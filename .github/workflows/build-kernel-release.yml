@@ -261,8 +261,8 @@ jobs:
             KSU_REPO_OWNER="tiann"
             KSU_REPO_NAME="KernelSU"
           elif [ "$ksu_type" = "RSKSU" ]; then
-            KSU_REPO_OWNER="rsuntk"
-            KSU_REPO_NAME="KernelSU"
+            KSU_REPO_OWNER="ReSukiSU"
+            KSU_REPO_NAME="ReSukiSU"
           else
             echo "::error::Unsupported ksu_type: $ksu_type"
             exit 1
@@ -369,7 +369,7 @@ jobs:
               exit 1
             fi
           else
-            susfs_resolved="unknown"
+            susfs_resolved=""
             echo "ℹ️ SUSFS disabled for this device, skipping resolution"
           fi
 
@@ -415,7 +415,7 @@ jobs:
           echo "config_json=$(jq -nc --argjson m '${{ toJSON(matrix) }}' '$m | del(.ksu_type, .ksu_hash, .ksu_resolved_hash, .susfs_resolved_hash)')" >> "$GITHUB_OUTPUT"
 
       - name: 📥 Checkout Code (to access manifests/)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Bouteillepleine/OnePlus_Kernels
           ref: rsksu
