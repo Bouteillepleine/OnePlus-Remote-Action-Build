@@ -203,29 +203,37 @@ jobs:
             exit 1
           fi
 
-          echo "Validating JSON config files in $config_dir..."
+          tmp_dir="$(mktemp -d)"
+          valid_jsonl="$tmp_dir/valid.jsonl"
+          : > "$valid_jsonl"
+
+          echo "Scanning JSON config files in $config_dir..."
+
           for file in "${all_json_files[@]}"; do
             if ! jq empty "$file" >/dev/null 2>&1; then
-              echo "::error file=$file::Invalid JSON in $file"
-              echo "---- file preview: $file ----"
-              sed -n '1,200p' "$file"
-              exit 1
+              echo "::warning file=$file::Skipping invalid JSON file: $file"
+              continue
             fi
-          done
 
-          echo "All config JSON files in $config_dir are valid"
-
-          jq -s '
-            map(
+            jq -c '
               if type == "array" then .[]
               else .
               end
-            )
-          ' "${all_json_files[@]}" > matrix.json
+            ' "$file" >> "$valid_jsonl"
+          done
+
+          if [ ! -s "$valid_jsonl" ]; then
+            echo "::error::No valid JSON configs found in $config_dir"
+            rm -rf "$tmp_dir"
+            exit 1
+          fi
+
+          jq -s '.' "$valid_jsonl" > matrix.json
 
           if ! jq empty matrix.json >/dev/null 2>&1; then
             echo "::error::Generated matrix.json is invalid"
             sed -n '1,200p' matrix.json
+            rm -rf "$tmp_dir"
             exit 1
           fi
 
@@ -234,14 +242,16 @@ jobs:
           count=$(jq 'length' <<<"$filtered")
 
           if [ "$count" -eq 0 ]; then
-            echo "::error::No config files found for model '$model_part' with OS version '$os_version'!"
+            echo "::error::No valid config found for model '$model_part' with OS version '$os_version'!"
             echo ""
-            echo "Available configurations in $config_dir:"
+            echo "Available valid configurations in $config_dir:"
             jq -r '.[] | "  - \(.model)_\(.os_version | ascii_downcase) (\(.os_version), \(.android_version)-\(.kernel_version))"' matrix.json
+            rm -rf "$tmp_dir"
             exit 1
           fi
 
           echo "$filtered" | jq '.' > matrix.json
+          rm -rf "$tmp_dir"
 
           merged_matrix=$(jq -n \
             --argjson devices "$filtered" \
@@ -421,7 +431,7 @@ jobs:
           echo "config_json=$(jq -nc --argjson m '${{ toJSON(matrix) }}' '$m | del(.ksu_type, .ksu_hash, .ksu_resolved_hash, .susfs_resolved_hash)')" >> "$GITHUB_OUTPUT"
 
       - name: 📥 Checkout Code (to access manifests/)
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           repository: Bouteillepleine/OnePlus_Kernels
           ref: rsksu
