@@ -193,6 +193,18 @@ jobs:
             exit 1
           fi
 
+          echo "Validating JSON config files..."
+          for file in "${all_json_files[@]}"; do
+            if ! jq empty "$file" >/dev/null 2>&1; then
+              echo "::error file=$file::Invalid JSON in $file"
+              echo "---- file preview: $file ----"
+              sed -n '1,200p' "$file"
+              exit 1
+            fi
+          done
+
+          echo "All config JSON files are valid"
+
           jq -s '
             map(
               if type == "array" then .[]
@@ -201,7 +213,7 @@ jobs:
             )
           ' "${all_json_files[@]}" > matrix.json
 
-          if ! jq empty matrix.json; then
+          if ! jq empty matrix.json >/dev/null 2>&1; then
             echo "::error::Generated matrix.json is invalid"
             sed -n '1,200p' matrix.json
             exit 1
