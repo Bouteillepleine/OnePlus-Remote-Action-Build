@@ -101,7 +101,7 @@ on:
           - OP-ACE-RACE_oos14
           - OP-ACE_oos14
           - OP-PAD-PRO_oos14
-        default: OP11_oos16
+        default: OP15_oos16
 
       ksu_options:
         description: 'Enter KernelSU build json'
