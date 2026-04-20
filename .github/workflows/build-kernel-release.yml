@@ -428,7 +428,22 @@ jobs:
         id: prepare_config
         shell: bash
         run: |
-          echo "config_json=$(jq -nc --argjson m '${{ toJSON(matrix) }}' '$m | del(.ksu_type, .ksu_hash, .ksu_resolved_hash, .susfs_resolved_hash)')" >> "$GITHUB_OUTPUT"
+          config_json=$(jq -nc --argjson m '${{ toJSON(matrix) }}' '
+            $m
+            | del(.ksu_type, .ksu_hash, .ksu_resolved_hash, .susfs_resolved_hash)
+            | .unicode = (.unicode // false)
+            | .ds = (.ds // false)
+            | .ntsync = (.ntsync // false)
+            | .hmbird = (.hmbird // false)
+            | .susfs = (.susfs // true)
+            | .bbg = (.bbg // false)
+            | .bbr = (.bbr // true)
+            | .ttl = (.ttl // true)
+            | .ip_set = (.ip_set // true)
+            | .rust_build = (.rust_build // true)
+            | .lto = (.lto // "none")
+          ')
+          echo "config_json=$config_json" >> "$GITHUB_OUTPUT"
 
       - name: 📥 Checkout Code (to access manifests/)
         uses: actions/checkout@v4
